@@ -1,9 +1,13 @@
-use ide::FilePosition;
-
-struct Cursor {
-    pos: FilePosition,
+pub struct Cursor {
+    pos: i32,
 }
 
 impl Cursor {
-    fn handle_input(data: dioxus_html::on::KeyboardData) {}
+    pub fn handle_input(&mut self, data: &dioxus_html::on::KeyboardData) {}
+}
+
+impl Default for Cursor {
+    fn default() -> Self {
+        Self { pos: 0 }
+    }
 }

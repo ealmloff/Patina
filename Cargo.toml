@@ -10,18 +10,25 @@ dioxus-html = "0.1.6"
 
 rfd = "0.5"
 
-ide = {package = "ra_ap_ide", version = "0.0.94"}
-vfs = {package = "ra_ap_vfs", version = "0.0.94"}
-syntax = {package = "ra_ap_syntax", version = "0.0.94"}
-ra_ap_cfg = "0.0.94"
-ra_ap_base_db = "0.0.94"
-
 serde = { version = "1", features = ["derive"] }
 
+# lsp-types = "0.92.0"
+
+syntect = { version = "4.6", default-features = false, features = ["default-fancy"]}
+
+ropey = "1.3.2"
+
+lazy_static = "1.4.0"
+
+web-sys = "0.3.56"
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# rink = { git = "https://github.com/DioxusLabs/rink.git" }
-rink = { path = "./rink" }
+# rink = { git = "https://github.com/DioxusLabs/rink" }
+rink = { path = "../rink" }
 dioxus = { version = "0.1.8", features = ["desktop"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 dioxus = { version = "0.1.8", features = ["web"] }
+
+[features]
+term = []
