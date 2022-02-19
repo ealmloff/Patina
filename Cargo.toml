@@ -23,8 +23,8 @@ lazy_static = "1.4.0"
 web-sys = "0.3.56"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# rink = { git = "https://github.com/DioxusLabs/rink" }
-rink = { path = "../rink" }
+# pending PR
+rink = { git = "https://github.com/Demonthos/rink/", branch = "more-keys" }
 dioxus = { version = "0.1.8", features = ["desktop"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

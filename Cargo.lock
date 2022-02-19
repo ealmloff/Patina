@@ -1887,6 +1887,7 @@ dependencies = [
 [[package]]
 name = "rink"
 version = "0.1.0"
+source = "git+https://github.com/Demonthos/rink/?branch=more-keys#abcc9ea21366bb87163239263bbe53d7521bcbe2"
 dependencies = [
  "anyhow",
  "bumpalo",
