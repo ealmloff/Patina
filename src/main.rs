@@ -9,7 +9,7 @@ use syntect::parsing::SyntaxSet;
 
 mod cursor;
 
-use cursor::Cursor;
+use cursor::{Cursor, Pos};
 
 lazy_static! {
     static ref PS: SyntaxSet = SyntaxSet::load_defaults_newlines();
@@ -17,15 +17,18 @@ lazy_static! {
     static ref THEME: &'static Theme = &TS.themes["base16-ocean.dark"];
 }
 
-const DEMO_TEXT: &str = "fn app(cx: Scope) -> Element {
-    let (count, set_count) = use_state(&cx, || 0);
+// const DEMO_TEXT: &str = "fn app(cx: Scope) -> Element {
+//     let (count, set_count) = use_state(&cx, || 0);
 
-    cx.render(rsx!(
-        h1 { \"High-Five counter: {count}\" }
-        button { onclick: move |_| set_count(count + 1), \"Up high!\" }
-        button { onclick: move |_| set_count(count - 1), \"Down low!\" }
-    ))
-}";
+//     cx.render(rsx!(
+//         h1 { \"High-Five counter: {count}\" }
+//         button { onclick: move |_| set_count(count + 1), \"Up high!\" }
+//         button { onclick: move |_| set_count(count - 1), \"Down low!\" }
+//     ))
+// }";
+const DEMO_TEXT: &str = "1234567890
+1234567890
+1234567890";
 
 fn color_to_str(c: Color) -> String {
     format!("rgba({}, {}, {}, {})", c.r, c.g, c.b, c.a as f32 / 255.0)
@@ -36,9 +39,11 @@ fn main() {
     dioxus::web::launch(App);
 
     #[cfg(not(target_arch = "wasm32"))]
-    if cfg!(feature = "term") {
+    {
+        #[cfg(feature = "term")]
         rink::launch(App);
-    } else {
+
+        #[cfg(not(feature = "term"))]
         dioxus::desktop::launch(App);
     }
 }
@@ -105,8 +110,8 @@ struct TabProps {
 fn Tab(cx: Scope<TabProps>) -> Element {
     let (scroll_y, set_scroll_y) = use_state(&cx, || 0.0);
     let rope = use_ref(&cx, || Rope::from_str(&cx.props.initial_text));
-    // sorted array of cursors
-    let cursors = use_ref(&cx, || vec![Cursor::default()]);
+    // sorted array of cursor
+    let cursors = use_ref(&cx, || vec![Cursor::default(), Cursor::new(Pos::new(1, 0))]);
     let current_cursors = cursors.read().clone();
     let mut cursor_iter = current_cursors
         .iter()
@@ -140,30 +145,44 @@ fn Tab(cx: Scope<TabProps>) -> Element {
             prevent_default: "onkeydown",
             onkeydown: |k| {
                 let write = &mut rope.write();
+                let mut row = 0;
+                let mut new_rows = 0;
+                let mut new_chars = 0;
                 for c in cursors.write().iter_mut(){
-                    c.handle_input(&*k.data, write);
+                    c.move_row(new_rows, write);
+                    if c.row() <= row{
+                        c.move_col(new_chars, write);
+                    }
+                    else{
+                        row = c.row();
+                        new_chars = 0;
+                    }
+                    let [dr, dc] = c.handle_input(&*k.data, write);
+                    new_rows += dr;
+                    new_chars += dc;
                 }
             },
             tabindex: "0",
             // onwheel: move |w| set_scroll_y((scroll_y + w.data.delta_y.signum() as f32).max(0.0)),
 
             lines.enumerate().map(|(i, l)| {
-                let cs: std::borrow::Cow<str>  = l.into();
+                let cs: std::borrow::Cow<str> = l.into();
                 let ranges = h.highlight(&cs, &PS);
 
                 let mut ranges: Vec<_> = ranges.into_iter().map(|(s, t)|{
-                    let len = t.len();
+                    let final_text_pos = text_pos + t.len();
                     let mut tail = t;
                     let mut segments = Vec::new();
                     while let Some(idx) = cursor_iter.next_if(|idx|{
-                        text_pos + len > *idx
+                        final_text_pos > *idx
                     }){
                         let (before, new_tail) = tail.split_at(idx - text_pos);
                         tail = new_tail;
                         segments.push((s, before));
                         segments.push((cursor_style, "|"));
+                        text_pos += before.len();
                     }
-                    text_pos += len;
+                    text_pos += tail.len();
                     segments.push((s, tail.trim_end_matches('\n')));
                     segments.into_iter()
                 }).flatten().filter(|(_, t)| t.len() > 0).collect();
@@ -195,6 +214,13 @@ fn Tab(cx: Scope<TabProps>) -> Element {
                     }
                 })
             }).skip(*scroll_y as usize)
+            cursors.read().iter().map(|c|
+                cx.render(rsx! {
+                    p{
+                        "{c:?}"
+                    }
+                })
+            )
         }
     })
 }
