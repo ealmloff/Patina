@@ -111,7 +111,13 @@ fn Tab(cx: Scope<TabProps>) -> Element {
     let (scroll_y, set_scroll_y) = use_state(&cx, || 0.0);
     let rope = use_ref(&cx, || Rope::from_str(&cx.props.initial_text));
     // sorted array of cursor
-    let cursors = use_ref(&cx, || vec![Cursor::default(), Cursor::new(Pos::new(1, 0))]);
+    let cursors = use_ref(&cx, || {
+        vec![
+            Cursor::new(Pos::new(0, 1)),
+            Cursor::new(Pos::new(0, 3)),
+            Cursor::new(Pos::new(0, 5)),
+        ]
+    });
     let current_cursors = cursors.read().clone();
     let mut cursor_iter = current_cursors
         .iter()
@@ -149,8 +155,9 @@ fn Tab(cx: Scope<TabProps>) -> Element {
                 let mut new_rows = 0;
                 let mut new_chars = 0;
                 for c in cursors.write().iter_mut(){
+                    let r = c.row();
                     c.move_row(new_rows, write);
-                    if c.row() <= row{
+                    if r <= row{
                         c.move_col(new_chars, write);
                     }
                     else{

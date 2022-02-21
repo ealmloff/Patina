@@ -175,3 +175,59 @@ impl Default for Cursor {
         }
     }
 }
+
+#[test]
+fn cursor_direction_movement() {
+    let mut cursor = Cursor::new(Pos::new(0, 100));
+    let text = "hello world\nhi";
+    let rope = Rope::from_str(text);
+
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len());
+    cursor.down(&rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(1).unwrap().len());
+    cursor.up(&rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len());
+    cursor.left(&rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len() - 1);
+    cursor.right(&rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len());
+}
+
+#[test]
+fn cursor_col_movement() {
+    let mut cursor = Cursor::new(Pos::new(0, 100));
+    let text = "hello world\nhi";
+    let rope = Rope::from_str(text);
+
+    // move inside a row
+    cursor.move_col(-5, &rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len() - 5);
+    cursor.move_col(5, &rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len());
+
+    // move between rows
+    cursor.move_col(3, &rope);
+    assert_eq!(cursor.col(&rope), 2);
+    cursor.move_col(-3, &rope);
+    assert_eq!(cursor.col(&rope), text.lines().nth(0).unwrap().len());
+
+    // don't panic if moving out of range
+    cursor.move_col(-100, &rope);
+    cursor.move_col(1000, &rope);
+}
+
+#[test]
+fn cursor_row_movement() {
+    let mut cursor = Cursor::new(Pos::new(0, 100));
+    let text = "hello world\nhi";
+    let rope = Rope::from_str(text);
+
+    cursor.move_row(1, &rope);
+    assert_eq!(cursor.row(), 1);
+    cursor.move_row(-1, &rope);
+    assert_eq!(cursor.row(), 0);
+
+    // don't panic if moving out of range
+    cursor.move_row(-100, &rope);
+    cursor.move_row(1000, &rope);
+}
