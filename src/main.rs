@@ -1,13 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
 
-use code_area::CodeArea;
+// use code_area::CodeArea;
 use dioxus::prelude::*;
 use syntect::highlighting::{Color, Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
+use crate::code_area::CodeArea;
+
 mod code_area;
 mod cursor;
+mod cursors;
 mod span;
 mod utils;
 

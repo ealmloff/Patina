@@ -1,13 +1,16 @@
+use std::cmp::Ordering;
+
+use dioxus::events::KeyboardData;
 use ropey::Rope;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pos {
-    row: usize,
     col: usize,
+    row: usize,
 }
 
 impl Pos {
-    pub fn new(row: usize, col: usize) -> Self {
+    pub fn new(col: usize, row: usize) -> Self {
         Self { row, col }
     }
 
@@ -87,18 +90,66 @@ impl Pos {
     }
 }
 
-#[derive(Debug, Clone)]
+impl Ord for Pos {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.row.cmp(&other.row).then(self.col.cmp(&other.col))
+    }
+}
+
+impl PartialOrd for Pos {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cursor {
     pub start: Pos,
     pub end: Option<Pos>,
 }
 
 impl Cursor {
-    pub fn new(pos: Pos) -> Self {
+    pub fn from_start(pos: Pos) -> Self {
         Self {
             start: pos,
             end: None,
         }
+    }
+
+    pub fn new(start: Pos, end: Pos) -> Self {
+        Self {
+            start,
+            end: Some(end),
+        }
+    }
+
+    fn move_cursor(&mut self, f: impl FnOnce(&mut Pos), shift: bool) {
+        if shift {
+            self.with_end(f);
+        } else {
+            f(&mut self.start)
+        }
+    }
+
+    fn delete_selection(&mut self, rope: &mut Rope) -> [i32; 2] {
+        let first = self.first();
+        let last = self.last();
+        let dr = first.row as i32 - last.row as i32;
+        let dc = if dr != 0 {
+            -(last.col as i32)
+        } else {
+            let b = last == first;
+            println!("{b}");
+            first.col as i32 - last.col as i32
+        };
+        rope.remove(first.idx(rope)..last.idx(rope));
+        println!("{first:?} {last:?}");
+        if let Some(end) = self.end.take() {
+            if self.start > end {
+                self.start = end;
+            }
+        }
+        [dc, dr]
     }
 
     pub fn handle_input(
@@ -109,65 +160,47 @@ impl Cursor {
         use dioxus_html::KeyCode::*;
         match data.key_code {
             UpArrow => {
-                if data.shift_key {
-                    self.with_end(|c| c.up(rope));
-                } else {
-                    self.start.up(rope);
-                    self.end = None;
-                }
+                self.move_cursor(|c| c.up(rope), data.shift_key);
                 [0, 0]
             }
             DownArrow => {
-                if data.shift_key {
-                    self.with_end(|c| c.down(rope));
-                } else {
-                    self.start.down(rope);
-                    self.end = None;
-                }
+                self.move_cursor(|c| c.down(rope), data.shift_key);
                 [0, 0]
             }
             RightArrow => {
-                if data.shift_key {
-                    self.with_end(|c| c.right(rope));
-                } else {
-                    self.start.right(rope);
-                    self.end = None;
-                }
+                self.move_cursor(|c| c.right(rope), data.shift_key);
                 [0, 0]
             }
             LeftArrow => {
-                if data.shift_key {
-                    self.with_end(|c| c.left(rope));
-                } else {
-                    self.start.left(rope);
-                    self.end = None;
-                }
+                self.move_cursor(|c| c.left(rope), data.shift_key);
                 [0, 0]
             }
             End => {
-                self.start.col = self.start.len_line(rope);
-                self.end = None;
+                self.move_cursor(|c| c.col = c.len_line(rope), data.shift_key);
                 [0, 0]
             }
             Home => {
-                self.start.col = 0;
-                self.end = None;
+                self.move_cursor(|c| c.col = 0, data.shift_key);
                 [0, 0]
             }
             Backspace => {
                 self.start.realize_col(rope);
-                let idx = self.start.idx(rope);
-                if idx > 0 {
-                    let old_row = self.start.row;
-                    self.start.left(rope);
-                    rope.remove(idx - 1..idx);
-                    if old_row == self.start.row {
-                        [0, -1]
-                    } else {
-                        [-1, 0]
-                    }
+                let start_idx = self.start.idx(rope);
+                if self.end.is_some() {
+                    self.delete_selection(rope)
                 } else {
-                    [0, 0]
+                    if start_idx > 0 {
+                        let old_row = self.start.row;
+                        self.start.left(rope);
+                        rope.remove(start_idx - 1..start_idx);
+                        if old_row == self.start.row {
+                            [-1, 0]
+                        } else {
+                            [0, -1]
+                        }
+                    } else {
+                        [0, 0]
+                    }
                 }
             }
             Enter => {
@@ -175,21 +208,25 @@ impl Cursor {
                 rope.insert_char(self.start.idx(rope), '\n');
                 self.start.col = 0;
                 self.start.down(rope);
-                [1, -(old_col as i32)]
+                [-(old_col as i32), 1]
             }
             Tab => {
                 self.start.realize_col(rope);
+                let mut change = self.delete_selection(rope);
                 rope.insert_char(self.start.idx(rope), '\t');
                 self.start.right(rope);
-                [0, 1]
+                change[0] += 1;
+                change
             }
             _ => {
                 self.start.realize_col(rope);
                 if data.key.len() == 1 {
+                    let mut change = self.delete_selection(rope);
                     let c = data.key.chars().next().unwrap();
                     rope.insert_char(self.start.idx(rope), c);
                     self.start.right(rope);
-                    [0, 1]
+                    change[0] += 1;
+                    change
                 } else {
                     [0, 0]
                 }
@@ -201,6 +238,38 @@ impl Cursor {
         let mut new = self.end.take().unwrap_or(self.start.clone());
         f(&mut new);
         self.end.replace(new);
+    }
+
+    fn first(&self) -> &Pos {
+        if let Some(e) = &self.end {
+            e.min(&self.start)
+        } else {
+            &self.start
+        }
+    }
+
+    fn last(&self) -> &Pos {
+        if let Some(e) = &self.end {
+            e.max(&self.start)
+        } else {
+            &self.start
+        }
+    }
+
+    fn first_mut(&mut self) -> &mut Pos {
+        if let Some(e) = &mut self.end {
+            e.min(&mut self.start)
+        } else {
+            &mut self.start
+        }
+    }
+
+    fn last_mut(&mut self) -> &mut Pos {
+        if let Some(e) = &mut self.end {
+            e.max(&mut self.start)
+        } else {
+            &mut self.start
+        }
     }
 }
 
@@ -215,7 +284,7 @@ impl Default for Cursor {
 
 #[test]
 fn pos_direction_movement() {
-    let mut pos = Pos::new(0, 100);
+    let mut pos = Pos::new(100, 0);
     let text = "hello world\nhi";
     let rope = Rope::from_str(text);
 
@@ -232,7 +301,7 @@ fn pos_direction_movement() {
 
 #[test]
 fn pos_col_movement() {
-    let mut pos = Pos::new(0, 100);
+    let mut pos = Pos::new(100, 0);
     let text = "hello world\nhi";
     let rope = Rope::from_str(text);
 
@@ -255,7 +324,7 @@ fn pos_col_movement() {
 
 #[test]
 fn cursor_row_movement() {
-    let mut pos = Pos::new(0, 100);
+    let mut pos = Pos::new(100, 0);
     let text = "hello world\nhi";
     let rope = Rope::from_str(text);
 
@@ -271,7 +340,7 @@ fn cursor_row_movement() {
 
 #[test]
 fn cursor_input() {
-    let mut cursor = Cursor::new(Pos::new(0, 0));
+    let mut cursor = Cursor::from_start(Pos::new(0, 0));
     let text = "hello world\nhi";
     let mut rope = Rope::from_str(text);
 
