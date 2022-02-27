@@ -22,13 +22,7 @@ pub struct CodeAreaProps {
 pub fn CodeArea(cx: Scope<CodeAreaProps>) -> Element {
     let (scroll_y, set_scroll_y) = use_state(&cx, || 0.0);
     let rope = use_ref(&cx, || Rope::from_str(&cx.props.initial_text));
-    let cursors = use_ref(&cx, || {
-        Cursors(vec![
-            Cursor::from_start(Pos::new(3, 0)),
-            Cursor::from_start(Pos::new(5, 1)),
-            Cursor::from_start(Pos::new(7, 2)),
-        ])
-    });
+    let cursors = use_ref(&cx, || Cursors::default());
 
     let text = rope.read().clone();
     let num_lines = text.len_lines();
@@ -63,11 +57,14 @@ pub fn CodeArea(cx: Scope<CodeAreaProps>) -> Element {
             align_items: "left",
             justify_content: "left",
             background_color: "{bg}",
+            tabindex: "0",
+            display: "flex",
+            box_sizing: "border-box",
+
             prevent_default: "onkeydown",
             onkeydown: |k| {
                 cursors.write().process_input(&*k, &mut rope.write())
             },
-            tabindex: "0",
             // onwheel: move |w| set_scroll_y((scroll_y + w.data.delta_y.signum() as f32).max(0.0)),
 
             lines.enumerate().map(|(i, l)| {
@@ -86,7 +83,7 @@ pub fn CodeArea(cx: Scope<CodeAreaProps>) -> Element {
                         tail = new_tail;
                         segments.push((if highlighted{highlight_mod(text_style)}else{text_style}, before));
                         highlighted = !highlighted;
-                        if marker_type == SelectionMarkerType::Start{
+                        if marker_type == SelectionMarkerType::End{
                             segments.push((cursor_style, "|"));
                         }
                     }

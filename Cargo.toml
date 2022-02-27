@@ -24,7 +24,8 @@ web-sys = "0.3.56"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # pending PR
-rink = { git = "https://github.com/Demonthos/rink/", branch = "more-keys" }
+# rink = { git = "https://github.com/Demonthos/rink/", branch = "more-keys" }
+rink = { path = "../rink" }
 dioxus = { version = "0.1.8", features = ["desktop"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

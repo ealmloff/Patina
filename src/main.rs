@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
-// use code_area::CodeArea;
 use dioxus::prelude::*;
-use syntect::highlighting::{Color, Theme, ThemeSet};
+use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::code_area::CodeArea;
@@ -20,7 +19,8 @@ lazy_static! {
     static ref THEME: &'static Theme = &TS.themes["base16-ocean.dark"];
 }
 
-const DEMO_TEXT: &str = "fn app(cx: Scope) -> Element {
+const DEMO_TEXT: &str = "// alt-arrow to spawn cursor
+fn app(cx: Scope) -> Element {
     let (count, set_count) = use_state(&cx, || 0);
 
     cx.render(rsx!(
@@ -65,6 +65,8 @@ fn App(cx: Scope) -> Element {
             width: "100%",
             height: "100%",
             position: "absolute",
+            display: "flex",
+            flex_direction: "row",
             Tab{
                 initial_text: DEMO_TEXT.to_string()
             }

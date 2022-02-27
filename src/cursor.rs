@@ -138,12 +138,9 @@ impl Cursor {
         let dc = if dr != 0 {
             -(last.col as i32)
         } else {
-            let b = last == first;
-            println!("{b}");
             first.col as i32 - last.col as i32
         };
         rope.remove(first.idx(rope)..last.idx(rope));
-        println!("{first:?} {last:?}");
         if let Some(end) = self.end.take() {
             if self.start > end {
                 self.start = end;
