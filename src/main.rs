@@ -19,16 +19,16 @@ lazy_static! {
     static ref THEME: &'static Theme = &TS.themes["base16-ocean.dark"];
 }
 
-const DEMO_TEXT: &str = "// alt-arrow to spawn cursor
-fn app(cx: Scope) -> Element {
-    let (count, set_count) = use_state(&cx, || 0);
-
-    cx.render(rsx!(
-        h1 { \"High-Five counter: {count}\" }
-        button { onclick: move |_| set_count(count + 1), \"Up high!\" }
-        button { onclick: move |_| set_count(count - 1), \"Down low!\" }
-    ))
-}";
+const DEMO_TEXT: &str = r"// alt-move to spawn cursor
+// ctrl-move to move word
+// shift-move to select
+// ___       __   _______   ___       ________  ________  _____ ______   _______      
+// |\  \     |\  \|\  ___ \ |\  \     |\   ____\|\   __  \|\   _ \  _   \|\  ___ \     
+// \ \  \    \ \  \ \   __/|\ \  \    \ \  \___|\ \  \|\  \ \  \\\__\ \  \ \   __/|    
+//  \ \  \  __\ \  \ \  \_|/_\ \  \    \ \  \    \ \  \\\  \ \  \\|__| \  \ \  \_|/__  
+//   \ \  \|\__\_\  \ \  \_|\ \ \  \____\ \  \____\ \  \\\  \ \  \    \ \  \ \  \_|\ \ 
+//    \ \____________\ \_______\ \_______\ \_______\ \_______\ \__\    \ \__\ \_______\
+//     \|____________|\|_______|\|_______|\|_______|\|_______|\|__|     \|__|\|_______|";
 // const DEMO_TEXT: &str = "1234567890
 // 1234567890
 // 1234567890";

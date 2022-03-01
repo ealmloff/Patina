@@ -127,7 +127,8 @@ impl Cursor {
         if shift {
             self.with_end(f);
         } else {
-            f(&mut self.start)
+            f(&mut self.start);
+            self.end = None;
         }
     }
 
@@ -157,19 +158,93 @@ impl Cursor {
         use dioxus_html::KeyCode::*;
         match data.key_code {
             UpArrow => {
-                self.move_cursor(|c| c.up(rope), data.shift_key);
+                if data.ctrl_key {
+                    self.move_cursor(
+                        |c| {
+                            let mut change = -1;
+                            let row = c.row() as i32;
+                            while row + change > 0 {
+                                let chr = rope.line((row + change) as usize);
+                                if chr.chars().all(|chr| chr.is_whitespace()) {
+                                    break;
+                                }
+                                change -= 1;
+                            }
+                            c.move_row(change as i32, rope);
+                        },
+                        data.shift_key,
+                    );
+                } else {
+                    self.move_cursor(|c| c.up(rope), data.shift_key);
+                }
                 [0, 0]
             }
             DownArrow => {
-                self.move_cursor(|c| c.down(rope), data.shift_key);
+                if data.ctrl_key {
+                    self.move_cursor(
+                        |c| {
+                            let mut change = 1;
+                            let row = c.row();
+                            let length = rope.len_lines();
+                            while row + change + 1 < length {
+                                let chr = rope.line(row + change);
+                                if chr.chars().all(|chr| chr.is_whitespace()) {
+                                    break;
+                                }
+                                change += 1;
+                            }
+                            c.move_row(change as i32, rope);
+                        },
+                        data.shift_key,
+                    );
+                } else {
+                    self.move_cursor(|c| c.down(rope), data.shift_key);
+                }
                 [0, 0]
             }
             RightArrow => {
-                self.move_cursor(|c| c.right(rope), data.shift_key);
+                if data.ctrl_key {
+                    self.move_cursor(
+                        |c| {
+                            let mut change = 1;
+                            let idx = c.idx(rope);
+                            let length = rope.len_chars();
+                            while idx + change + 1 < length {
+                                let chr = rope.char(idx + change);
+                                if chr.is_whitespace() {
+                                    break;
+                                }
+                                change += 1;
+                            }
+                            c.move_col(change as i32, rope);
+                        },
+                        data.shift_key,
+                    );
+                } else {
+                    self.move_cursor(|c| c.right(rope), data.shift_key);
+                }
                 [0, 0]
             }
             LeftArrow => {
-                self.move_cursor(|c| c.left(rope), data.shift_key);
+                if data.ctrl_key {
+                    self.move_cursor(
+                        |c| {
+                            let mut change = -1;
+                            let idx = c.idx(rope) as i32;
+                            while idx + change > 0 {
+                                let chr = rope.char((idx + change) as usize);
+                                if chr == ' ' {
+                                    break;
+                                }
+                                change -= 1;
+                            }
+                            c.move_col(change as i32, rope);
+                        },
+                        data.shift_key,
+                    );
+                } else {
+                    self.move_cursor(|c| c.left(rope), data.shift_key);
+                }
                 [0, 0]
             }
             End => {
