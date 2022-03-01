@@ -51,55 +51,40 @@ pub struct Cursors(pub Vec<Cursor>);
 
 impl Cursors {
     pub fn process_input(&mut self, keyboard_data: &KeyboardData, rope: &mut Rope) {
-        if keyboard_data.alt_key {
-            let direction = match &keyboard_data.key_code {
-                KeyCode::UpArrow => [0, -1],
-                KeyCode::DownArrow => [0, 1],
-                KeyCode::RightArrow => [1, 0],
-                KeyCode::LeftArrow => [-1, 0],
-                _ => return,
-            };
-            let mut new = Vec::new();
-            for c in &self.0 {
-                let mut new_cursor = c.clone();
-
-                new_cursor.start.move_col(direction[0], rope);
-                new_cursor.start.move_row(direction[1], rope);
-                if let Some(e) = &mut new_cursor.end {
-                    e.move_col(direction[0], rope);
-                    e.move_row(direction[1], rope);
-                }
-                new.push(new_cursor);
-            }
-            self.0.append(&mut new);
+        let mut old = if keyboard_data.alt_key {
+            self.0.clone()
         } else {
-            let mut row = 0;
-            let mut new_rows = 0;
-            let mut new_chars = 0;
-            for c in self.0.iter_mut() {
-                let r = c.start.row();
-                if new_rows != 0 {
-                    c.start.move_row(new_rows, rope);
-                    if let Some(e) = &mut c.end {
-                        e.move_row(new_rows, rope);
-                    }
+            Vec::new()
+        };
+
+        let mut row = 0;
+        let mut new_rows = 0;
+        let mut new_chars = 0;
+        for c in self.0.iter_mut() {
+            let r = c.start.row();
+            if new_rows != 0 {
+                c.start.move_row(new_rows, rope);
+                if let Some(e) = &mut c.end {
+                    e.move_row(new_rows, rope);
                 }
-                if r <= row {
-                    if new_chars != 0 {
-                        c.start.move_col_raw(new_chars);
-                        if let Some(e) = &mut c.end {
-                            e.move_col_raw(new_chars);
-                        }
-                    }
-                } else {
-                    row = r;
-                    new_chars = 0;
-                }
-                let [dc, dr] = c.handle_input(&keyboard_data, rope);
-                new_rows += dr;
-                new_chars += dc;
             }
+            if r <= row {
+                if new_chars != 0 {
+                    c.start.move_col_raw(new_chars);
+                    if let Some(e) = &mut c.end {
+                        e.move_col_raw(new_chars);
+                    }
+                }
+            } else {
+                row = r;
+                new_chars = 0;
+            }
+            let [dc, dr] = c.handle_input(&keyboard_data, rope);
+            new_rows += dr;
+            new_chars += dc;
         }
+
+        self.0.append(&mut old);
 
         self.remove_overlaping();
     }

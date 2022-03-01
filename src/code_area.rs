@@ -119,13 +119,6 @@ pub fn CodeArea(cx: Scope<CodeAreaProps>) -> Element {
                     }
                 })
             }).skip(*scroll_y as usize)
-            cursors.read().0.iter().map(|c|
-                cx.render(rsx! {
-                    p{
-                        "{c:?}"
-                    }
-                })
-            )
         }
     })
 }
